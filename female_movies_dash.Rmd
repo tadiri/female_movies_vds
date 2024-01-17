@@ -1,0 +1,137 @@
+---
+title: "Interactive Dashboard: Role of Females in Movie Industry"
+author: Dinara Talypova
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    social: menu
+    source_code: embed
+runtime: shiny
+---
+
+Column {data-width=650}
+-----------------------------------------------------------------------
+
+### Interactive Chart
+
+```{r}
+#install.packages("shiny")
+library(shiny)
+library(ggplot2)
+library(plotly)
+library(dplyr)
+ library(dplyr)
+  library(foreach)
+  library(ggplot2)
+  library(likert)
+  library(psych)
+  library(stringr)
+  library(ggsignif)
+  library(scales)
+  library(hrbrthemes)
+  library(viridis)
+  library(tidyr)
+  library(outliers)
+  library(coin)
+  library(rstatix)
+library(summarytools)
+library(scales)
+library(summarytools)
+library("stringr")
+library(ggcorrplot)
+library(jsonlite)
+library(viridisLite)
+
+
+```
+
+```{r}
+joined = read.csv("https://raw.githubusercontent.com/tadiri/female_movies_vds/main/joined_female_movies.csv")
+sum_bechdel <- joined %>%
+  group_by(year, director_gender) %>%
+  get_summary_stats(bechdel, type = "mean") %>% 
+  na.omit() %>% 
+  dplyr::rename(bechdel_mean = "mean")
+sum_bechdel$bechdel_mean <- round(sum_bechdel$bechdel_mean, 2)
+
+sum_imdb <- joined %>%
+  group_by(year, director_gender) %>%
+  get_summary_stats(imdb_score, type = "mean") %>% 
+  na.omit() %>% 
+  dplyr::rename(imdb_mean = "mean")
+sum_imdb$imdb_mean <- round(sum_imdb$imdb_mean, 2)
+
+sum_gross <- joined %>%
+  group_by(year, director_gender) %>%
+  get_summary_stats(gross, type = "mean") %>% 
+  na.omit() %>% 
+  dplyr::rename(gross_mean = "mean")
+sum_gross$gross_mean <- round(sum_gross$gross_mean, 2)
+
+sum <- merge(sum_bechdel, sum_imdb, by = c("year", "director_gender"), all = TRUE)
+sum <- merge(sum, sum_gross, by = c("year", "director_gender"), all = TRUE)
+
+
+selectInput("parameter", "Select Parameter:", choices = c("bechdel_mean", "imdb_mean", "gross_mean"))
+
+# colors <- viridis(5)
+# print(colors)
+```
+
+```{r}
+
+renderPlotly({
+  selected_parameter <- input$parameter
+  
+linear <- sum %>%
+    ggplot(aes(x = year, y = get(selected_parameter), group = director_gender, color = director_gender)) +
+    geom_line() +
+    scale_color_manual(values = c("#440154", "#21908C")) +
+    theme_bw()
+  
+  ggplotly(linear)
+})
+
+plotlyOutput("myPlot")
+
+
+```
+
+Column {data-width=350}
+-----------------------------------------------------------------------
+
+### Chart B
+
+```{r}
+corr <- round(cor(joined %>% dplyr::select(year:imdb_votes, budget:oscar_nominated), use ="na.or.complete", method = c("spearman")), 2)
+p.mat <- cor_pmat(joined  %>% dplyr::select(year:imdb_votes, budget:oscar_nominated))
+diverging_colors <- c(
+   "#d12ed1a5", 
+  "#F7F7F7", "#21908C"
+)
+
+ggplot_corr <- ggcorrplot(
+  corr,
+  p.mat = p.mat,
+  hc.order = FALSE,
+  type = "lower",
+  lab = TRUE,
+  lab_size = 3.5,     
+  insig = "pch",
+  colors = diverging_colors)
+
+interactive_plot <- ggplotly(ggplot_corr)
+
+```
+
+```{r}
+renderPlotly({ interactive_plot })
+
+```
+
+### Chart C
+
+```{r}
+
+```
+
